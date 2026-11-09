@@ -3,9 +3,8 @@ package com.example.smartttexam.oj;
 import com.example.smartttexam.oj.OjModels.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.*;
@@ -13,13 +12,13 @@ import java.util.*;
 import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Also executable directly so the existing Surefire/JUnit discovery mismatch cannot hide zero tests. */
+/** Isolated JUnit Jupiter tests; no Spring context or external business resources. */
 public class OjSubmissionTests {
     private static final Owner OWNER = new Owner("fixture-student", "fixture-course", "fixture-classroom");
     private static final String SOURCE = "// 测试代码\r\nint main() { return 0; }\n";
-    private static Path base;
+    @TempDir Path base;
     private Path directory() throws IOException {
-        Path artifacts = base == null ? Paths.get("target", "oj-persistence-checks").toAbsolutePath() : base;
+        Path artifacts = base;
         Files.createDirectories(artifacts);
         return Files.createTempDirectory(artifacts, "case-");
     }
@@ -632,18 +631,4 @@ public class OjSubmissionTests {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        if (args.length != 1) throw new IllegalArgumentException("Pass an isolated test artifact directory");
-        base = Paths.get(args[0]).toAbsolutePath().normalize(); Files.createDirectories(base);
-        int passed = 0;
-        Method[] methods = OjSubmissionTests.class.getDeclaredMethods();
-        Arrays.sort(methods, Comparator.comparing(Method::getName));
-        for (Method method : methods) {
-            if (!method.isAnnotationPresent(Test.class)) continue;
-            try { method.invoke(new OjSubmissionTests()); passed++; System.out.println("PASS " + method.getName()); }
-            catch (InvocationTargetException ex) { throw new AssertionError("FAIL " + method.getName(), ex.getCause()); }
-        }
-        if (passed == 0) throw new AssertionError("No checks executed");
-        System.out.println("OJ persistence checks: " + passed + " passed; no Spring context, database, OJ or model requests.");
-    }
 }

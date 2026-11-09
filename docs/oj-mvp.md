@@ -57,22 +57,35 @@ new FileOjSubmissionRepository(directory, Clock.systemUTC(),
 
 ## 隔离回归检查
 
-先核对README及AGENTS中的环境要求。当前不修改JDK、Maven、POM、插件或依赖版本。
+先核对README及AGENTS中的环境要求。当前保留JDK、Maven、依赖及Surefire 2.22.2版本，仅调整exam测试选择配置。
 
-已有Surefire测试发现能力尚未完成统一配置，因此检查类同时提供JUnit 5测试方法及显式main入口；本轮使用main逐项执行带@Test的方法，零检查或任一失败均抛错。
+当前使用现有JUnit Jupiter 5.8.2及exam模块显式配置的Surefire 2.22.2。原默认Surefire 2.12.4不能发现JUnit 5方法；本次未新增项目依赖，未调整Spring Boot、Maven或JDK版本。39个@Test方法由JUnit独立执行，main反射入口已移除。
 
 在后端根目录使用PowerShell执行：
 
 ```powershell
-mvn -B -pl smarttt-exam -DskipTests package dependency:build-classpath '-Dmdep.outputFile=target/oj-fix-classpath.txt'
-if ($LASTEXITCODE -ne 0) { throw '编译或类路径生成失败' }
-$ojClasspath = (Get-Content -LiteralPath 'smarttt-exam/target/oj-fix-classpath.txt' -Raw).Trim()
-$ojClasspath = 'smarttt-exam/target/test-classes;smarttt-exam/target/classes;' + $ojClasspath
-java -cp $ojClasspath com.example.smartttexam.oj.OjSubmissionTests 'smarttt-exam/target/oj-fix-checks'
+mvn -B -pl smarttt-exam -Poj-tests test
+if ($LASTEXITCODE -ne 0) { throw 'OJ Profile回归检查失败' }
+# 或使用定向命令：
+mvn -B -pl smarttt-exam -Dtest=OjSubmissionTests test
 if ($LASTEXITCODE -ne 0) { throw 'OJ回归检查失败' }
 ```
 
-这不是执行现有全量测试，不启动Spring上下文，不连接MySQL、Redis、MinIO、模型或OJ。样例文件保存在target下的隔离目录，不能把这些夹具当成真实学生数据。
+这不是执行现有全量测试，不启动Spring上下文，不连接MySQL、Redis、MinIO、模型或OJ。JUnit @TempDir为每个方法提供独立临时目录，测试结束自动递归清理；文件仓库和执行器仍按原try/finally规则关闭。夹具不是真实学生数据。
+
+默认Surefire保留2.22.2和failIfNoTests=true，不再配置includes/excludes，恢复通用测试发现规则。只有显式启用oj-tests Profile时才限定OjSubmissionTests，Profile继承2.22.2并明确设置failIfNoTests=true，未发现目标测试会失败。Profile不默认激活，仅配置在exam模块，不改变其他模块。
+
+普通`mvn -pl smarttt-exam test`可能发现原SmartttExamApplicationTests并启动Spring上下文；该测试没有被永久排除。数据库、Redis、MinIO等资源尚未确认隔离，本轮禁止且未执行普通默认test，不能宣称旧Spring集成测试通过。默认发现行为仅通过POM、effective-pom及原测试源码静态核查；实际资源隔离后另行验证。也不执行根项目全量test。
+
+### Maven自动化集成验证（2026-11-09）
+
+白名单修复后实际执行两种命令：`mvn -B -pl smarttt-exam -Poj-tests test`和`mvn -B -pl smarttt-exam -Dtest=OjSubmissionTests test`。均BUILD SUCCESS、退出码0；各自独立保存的Surefire XML均为39项、0失败、0错误、0跳过，39个方法名逐一核对无遗漏。日志及报告在`smarttt-exam/target/oj-profile-fix/`。另执行help:effective-pom，默认build/plugins中Surefire为2.22.2、failIfNoTests=true且无includes/excludes。没有运行默认test或原Spring测试，未修改OJ源码和测试代码。
+
+目标命令实际BUILD SUCCESS，退出码0；Surefire XML和文本报告均为Tests run:39、Failures:0、Errors:0、Skipped:0，测试名称逐一与HEAD版本的39项核对一致。全部测试逻辑与断言保留，业务实现无变化。
+
+故意失败验证只在`target/oj-maven-integration/negative`创建独立测试工程副本，复用当前生产源码只读编译、相同JUnit依赖及Surefire配置。副本仅把一个源码相等断言改成错误期望。实际命令`mvn -B -f smarttt-exam/target/oj-maven-integration/negative/pom.xml -Dtest=OjSubmissionTests test`执行39项，1项失败、0错误、0跳过，BUILD FAILURE、退出码1。正式测试源码未受故障注入影响。
+
+正式报告位于`smarttt-exam/target/surefire-reports/TEST-com.example.smartttexam.oj.OjSubmissionTests.xml`；运行日志、负例报告及退出码位于`smarttt-exam/target/oj-maven-integration`。以下历史验证记录中的手动main和“未集成”说明仅描述当时状态，当前以本节标准Maven命令为准。
 
 测试类保留原16个@Test方法。正常并发批次总等待上限10秒，每个Future读取上限1秒；超时取消明确触发失败。执行器在finally中shutdownNow，并等待最多5秒，未终止同样判失败；检查线程使用daemon防止清理失败后JVM无限挂起。新增用例故意制造超时和任务异常，检查失败传播和线程清理。
 
