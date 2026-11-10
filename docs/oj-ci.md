@@ -25,8 +25,8 @@
 checkout → Java 8 → 生成临时Central settings → exam打包 → OJ测试 → 核验Surefire → 保留报告。
 
 ```bash
-mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -pl smarttt-exam -DskipTests package
-mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -pl smarttt-exam -Poj-tests -DskipTests=false -Dmaven.test.skip=false test
+mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -f smarttt-exam/pom.xml -DskipTests package
+mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -f smarttt-exam/pom.xml -Poj-tests -DskipTests=false -Dmaven.test.skip=false test
 ```
 
 第一条命令只负责编译和打包，不能代表测试通过。第二条仅启用已审核的oj-tests Profile，不运行旧contextLoads。Surefire配置failIfNoTests=true，测试失败或未发现测试会使Maven失败；步骤没有continue-on-error。
@@ -35,11 +35,21 @@ mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -pl smarttt-exam -Poj-tests 
 
 工作流先执行`python3 scripts/ci/test_verify_oj_reports.py`，再执行`python3 scripts/ci/verify_oj_reports.py smarttt-exam/target/surefire-reports`。13个隔离子场景验证正常39项、重复、failure/error/skipped与汇总矛盾、数量不符、跨文件重复、缺失基线、报告缺失/损坏、零测试，以及新增测试和合法跨文件拆分。异常场景断言子进程退出1，成功场景断言退出0。未更改正式JUnit测试、POM或部署流程；Artifact上传规则及7天保留不变。
 
-exam父POM通过../pom.xml从checkout读取；exam没有依赖其他SmartTT本地模块，也没有systemPath或私有仓库依赖，不需要先install其他模块。根目录-pl选择会读取其他模块模型并可能提示原有重复依赖警告，但不执行它们的测试或部署。
+exam父POM通过../pom.xml从checkout读取；exam没有依赖其他SmartTT本地模块，也没有systemPath或私有仓库依赖，不需要先install其他模块。当前以-f smarttt-exam/pom.xml直接选择exam，加载父POM但不从根聚合器扫描evaluation等兄弟模块。-f不改变Shell工作目录：后续Python命令仍从仓库根运行，Surefire及上传路径仍为smarttt-exam/target/surefire-reports。
 
 actions/upload-artifact@v4在always()条件下收集Surefire的TEST-*.xml和*.txt，保留7天。未产出报告会提示warning，之前的构建/测试失败仍保留。编译错误可在Actions步骤日志查看。禁止上传JAR、打包配置或整个target目录；测试报告仅包含隔离夹具和测试进程信息，不应改为记录真实学生数据。
 
 ## 本地验证与远程待验证项
+
+### 2026-11-10：修正构建入口
+
+首次远程运行[42763715461](https://github.com/bingbing4871/smarttt-backend/actions/runs/42763715461)实际使用Temurin Java 8和Maven3.10.0。根目录-pl命令在模型解析阶段因evaluation POM的5处重复依赖失败，OJ测试和校验器未执行，未生成报告。旧版本Maven曾将相同问题报告为警告，旧的本地成功不能替代此远程结果。
+
+本次工作流只把两处-pl smarttt-exam替换为-f smarttt-exam/pom.xml；其余参数、Profile、脚本、权限、触发和上传步骤保持不变，不修改任何POM或部署文件。
+
+本地直接运行test生命周期，未先执行package。实际命令为`mvn -B -ntp -f smarttt-exam/pom.xml -Poj-tests '-DargLine=-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC' test`；进程级MAVEN_OPTS为`-Xms128m -Xmx512m -XX:MaxMetaspaceSize=256m -XX:+UseSerialGC`，finally恢复原值。使用现有Maven3.8.6/JDK21，实际39项、0失败/错误/跳过，BUILD SUCCESS、退出0，未扫描evaluation。13个校验器子场景全部符合预期，退出0；actionlint（未启用shellcheck）退出0。真实Surefire报告另由正式校验器核验，路径未变。证据位于`smarttt-exam/target/oj-ci-entry-final/`。
+
+先前本机Java8验证曾遇原生内存分配失败，之后受限内存package到达repackage时因Windows现有JAR占用而无法重命名；这些是本地限制，没有据此改POM、清理产物或结束其他进程。本轮没有验证package成功，修复后的GitHub Actions远程Java8编译打包、测试及上传仍需下一次Linux Runner运行确认。下面的旧记录保留为历史证据。
 
 本轮P2修复验证：13个隔离子场景全部符合预期，夹具测试退出0；真实Maven oj-tests重新编译并执行39项，0失败/错误/跳过，退出0；新校验器接受真实39个唯一用例和完整基线，退出0。actionlint（未启用shellcheck）退出0。证据在`smarttt-exam/target/oj-ci-guard-fix/`。本轮真实回归使用现有本机JDK21，未声称重新完成Java8冷依赖验证或远程GitHub验证。没有更改上传步骤、触发、权限、部署文件或业务代码。
 

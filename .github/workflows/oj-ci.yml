@@ -50,10 +50,10 @@ jobs:
           XML
 
       - name: Compile and package exam
-        run: mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -pl smarttt-exam -DskipTests package
+        run: mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -f smarttt-exam/pom.xml -DskipTests package
 
       - name: Run isolated OJ tests
-        run: mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -pl smarttt-exam -Poj-tests -DskipTests=false -Dmaven.test.skip=false test
+        run: mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -f smarttt-exam/pom.xml -Poj-tests -DskipTests=false -Dmaven.test.skip=false test
 
       - name: Test report verifier
         run: python3 scripts/ci/test_verify_oj_reports.py
