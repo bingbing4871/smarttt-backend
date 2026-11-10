@@ -1,0 +1,73 @@
+name: OJ Maven CI
+
+on:
+  push:
+    branches: ['feature/**']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oj-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  oj-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Java 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Show build environment
+        run: |
+          java -version
+          mvn -version
+
+      - name: Use Maven Central for public dependencies
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/oj-maven-settings.xml" <<'XML'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+            <mirrors>
+              <mirror>
+                <id>oj-central</id>
+                <url>https://repo.maven.apache.org/maven2</url>
+                <mirrorOf>*</mirrorOf>
+              </mirror>
+            </mirrors>
+          </settings>
+          XML
+
+      - name: Compile and package exam
+        run: mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -pl smarttt-exam -DskipTests package
+
+      - name: Run isolated OJ tests
+        run: mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -pl smarttt-exam -Poj-tests -DskipTests=false -Dmaven.test.skip=false test
+
+      - name: Test report verifier
+        run: python3 scripts/ci/test_verify_oj_reports.py
+
+      - name: Verify Surefire results
+        run: python3 scripts/ci/verify_oj_reports.py smarttt-exam/target/surefire-reports
+
+      - name: Preserve Surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oj-surefire-reports
+          path: |
+            smarttt-exam/target/surefire-reports/TEST-*.xml
+            smarttt-exam/target/surefire-reports/*.txt
+          if-no-files-found: warn
+          retention-days: 7
