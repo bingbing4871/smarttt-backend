@@ -137,6 +137,8 @@
                             <includes>
                                 <include>**/OjSubmissionTests.java</include>
                                 <include>**/OjHttpTests.java</include>
+                                <include>**/OjProductionAccessTests.java</include>
+                                <include>**/OjBackendTests.java</include>
                             </includes>
                             <failIfNoTests>true</failIfNoTests>
                         </configuration>

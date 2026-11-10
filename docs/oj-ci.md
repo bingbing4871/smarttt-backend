@@ -71,3 +71,7 @@ actions/upload-artifact@v4在always()条件下收集Surefire的TEST-*.xml和*.tx
 GitHub事件派发、Fork PR可能要求的人工批准、仓库Actions策略、官方Action下载、Temurin配置、Linux文件系统及artifact展示均待远程验证。本轮没有Commit、Push、PR、Merge或部署，没有声称远程CI通过。
 
 参考：[官方setup-java](https://github.com/actions/setup-java)、[Ubuntu 24.04 runner清单](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md)、[Maven Java版本要求](https://maven.apache.org/docs/history.html)。
+
+## 2026-11-10 后端集成基线
+
+当前三项P2修复后，本地基线保护108项：原39存储、14 HTTP、14认证和41后端集成（原24项加本轮17项）。原91条基线完整保留；原13个夹具子场景保留，并验证55个认证/后端基线逐项缺失必失败。Maven与报告校验实际通过、退出0。工作流未修改，新版本远程Java8验证待后续授权推送。修复详情、证据及生产阻断见oj-backend-integration.md。

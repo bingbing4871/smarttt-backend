@@ -133,6 +133,11 @@ public final class FileOjSubmissionRepository implements OjSubmissionRepository 
         return new ArrayList<>(matches.subList(from, (int) Math.min((long) from + limit, matches.size())));
     }
 
+    /** Validated detached snapshots for the single-process judge dispatcher. */
+    public synchronized List<Submission> snapshots() throws IOException {
+        ensureOpen(); return all();
+    }
+
     private List<Submission> all() throws IOException {
         return all(false);
     }

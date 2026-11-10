@@ -42,6 +42,15 @@ class ReportTests(unittest.TestCase):
                 self.assertEqual(expected, result.returncode, result.stderr)
                 print(f'{scenario}: exit={result.returncode}, expected={expected}')
 
+    def test_each_new_auth_and_backend_baseline_is_required(self):
+        for missing in NAMES[53:]:
+            with self.subTest(missing=missing), tempfile.TemporaryDirectory() as directory:
+                ET.ElementTree(report([name for name in NAMES if name != missing])).write(Path(directory) / 'TEST-missing.xml')
+                result = subprocess.run([sys.executable, str(SCRIPT), directory], capture_output=True, text=True)
+                self.assertEqual(1, result.returncode, result.stdout)
+                self.assertIn('missing baseline', result.stderr)
+        print(f'{len(NAMES[53:])} added baseline removals: all correctly rejected')
+
 
 if __name__ == '__main__':
     unittest.main()

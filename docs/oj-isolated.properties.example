@@ -1,0 +1,15 @@
+# Documentation template only; do not inherit production/default datasource settings.
+oj.http.enabled=false
+oj.auth.enabled=false
+oj.judge.enabled=false
+oj.http.storage-directory=/isolated/oj/submissions
+oj.judge.result-directory=/isolated/oj/results
+oj.judge.endpoint=http://127.0.0.1:5050
+# Compile binary cache budget: 64 KiB..64 MiB; stdout/stderr remain separately bounded.
+oj.judge.compile-artifact-limit-bytes=16777216
+# Inject isolated credential securely; never commit a real token.
+oj.judge.bearer-token=
+oj.auth.public-key-file=/isolated/keys/oj-public.pem
+oj.auth.issuer=REPLACE_WITH_AUDITED_ISSUER
+oj.auth.audience=smarttt-oj
+# Also requires isolated DataSource, audited Eligibility, and trusted CredentialProof.

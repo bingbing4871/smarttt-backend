@@ -18,6 +18,13 @@ import static org.springframework.http.HttpStatus.*;
 public class OjHttpController {
     private final OjSubmissionService service;
     private final OjHttpAccess access;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.example.smartttexam.oj.judge.OjJudgeJournal judgeJournal;
+    private OjHttpDtos.View view(Submission record) throws IOException {
+        OjHttpDtos.View result=new OjHttpDtos.View(record);
+        if(judgeJournal!=null) result.setJudgement(judgeJournal.read(record.getSubmissionId()));
+        return result;
+    }
     public OjHttpController(OjSubmissionService service, OjHttpAccess access) {
         this.service=Objects.requireNonNull(service); this.access=Objects.requireNonNull(access);
     }
@@ -34,7 +41,7 @@ public class OjHttpController {
     @PostMapping public OjHttpDtos.View submit(@RequestBody OjHttpDtos.Submit body,HttpServletRequest request) throws IOException {
         Owner owner=owner(request,body.courseId,body.classroomId);
         // Check conflict explicitly; leave all persistence/idempotency rules in the reviewed service.
-        try { return new OjHttpDtos.View(service.submit(owner,body.requestId,body.problemId,body.language,body.sourceCode)); }
+        try { return view(service.submit(owner,body.requestId,body.problemId,body.language,body.sourceCode)); }
         catch (IllegalArgumentException error) {
             if ("Request ID already used with different submission content".equals(error.getMessage()))
                 throw new ResponseStatusException(CONFLICT);
@@ -46,7 +53,7 @@ public class OjHttpController {
             HttpServletRequest request) throws IOException {
         Submission record=service.find(owner(request,course,classroom),id);
         if (record==null) throw new ResponseStatusException(NOT_FOUND);
-        return new OjHttpDtos.View(record);
+        return view(record);
     }
     @GetMapping public List<OjHttpDtos.View> history(@RequestParam("courseId") String course,
             @RequestParam("classroomId") String classroom,@RequestParam(value="problemId",required=false) String problem,
@@ -54,7 +61,7 @@ public class OjHttpController {
             @RequestParam(value="limit",defaultValue="20") int limit,HttpServletRequest request) throws IOException {
         Owner owner=owner(request,course,classroom);
         List<OjHttpDtos.View> result=new ArrayList<>();
-        for (Submission record:service.history(owner,problem,offset,limit)) result.add(new OjHttpDtos.View(record));
+        for (Submission record:service.history(owner,problem,offset,limit)) result.add(view(record));
         return result;
     }
     @ExceptionHandler(ResponseStatusException.class) public ResponseEntity<OjHttpDtos.Error> denied(ResponseStatusException error) {

@@ -21,6 +21,11 @@ public final class OjHttpDtos {
         public final String submissionId, requestId, courseId, classroomId, problemId;
         public final String language, sourceCode, submittedAt, status;
         public final long attemptNumber;
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+        public Judgement judgement;
+        public void setJudgement(com.example.smartttexam.oj.judge.OjJudgeJournal.Entry entry) {
+            if(entry!=null) judgement=new Judgement(entry.state,entry.verdict,entry.timeNs,entry.memoryBytes);
+        }
         public View(Submission record) {
             submissionId=record.getSubmissionId(); requestId=record.getRequestId();
             courseId=record.getOwner().getCourseId(); classroomId=record.getOwner().getClassroomId();
@@ -28,6 +33,11 @@ public final class OjHttpDtos {
             sourceCode=record.getSourceCode(); submittedAt=record.getSubmittedAt();
             status=record.getStatus().name(); attemptNumber=record.getAttemptNumber();
         }
+    }
+    public static class Judgement {
+        public final String state,verdict;
+        public final long timeNs,memoryBytes;
+        public Judgement(String state,String verdict,long time,long memory){this.state=state;this.verdict=verdict;timeNs=time;memoryBytes=memory;}
     }
     public static class Error {
         public final String code;
