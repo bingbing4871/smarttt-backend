@@ -31,9 +31,11 @@ mvn -B -ntp -s "$RUNNER_TEMP/oj-maven-settings.xml" -f smarttt-exam/pom.xml -Poj
 
 第一条命令只负责编译和打包，不能代表测试通过。第二条仅启用已审核的oj-tests Profile，不运行旧contextLoads。Surefire配置failIfNoTests=true，测试失败或未发现测试会使Maven失败；步骤没有continue-on-error。
 
-报告检查已提取到`scripts/ci/verify_oj_reports.py`，只用Python标准库。读取报告目录全部TEST-*.xml，以(classname,name)全局去重；缺失身份、跨文件重复、XML损坏或缺失、零测试均失败。逐项统计failure/error/skipped，与每个testsuite的tests/failures/errors/skipped四个非负整数属性核对；任何逐项异常均失败。固定清单`scripts/ci/oj-baseline.txt`保留当前39个已审核真实方法名，报告必须完整包含其指定类和方法，不能用39条其他用例替代。允许未来新增独立用例；不得为掩盖缺失而自动从修改后的源码重建基线。
+报告检查已提取到`scripts/ci/verify_oj_reports.py`，只用Python标准库。读取报告目录全部TEST-*.xml，以(classname,name)全局去重；缺失身份、跨文件重复、XML损坏或缺失、零测试均失败。逐项统计failure/error/skipped，与每个testsuite的tests/failures/errors/skipped四个非负整数属性核对；任何逐项异常均失败。固定清单`scripts/ci/oj-baseline.txt`保护53项已审核测试：原39行方法名保持不变，默认属于OjSubmissionTests；新增14行使用`com.example.smartttexam.oj.OjHttpTests#方法名`。load_baseline校验53个唯一身份、存储类39项及HTTP类14项。报告必须完整包含这些类与方法，不能用同数量的其他用例替代。允许报告未来增加独立用例；扩大已审核基线须显式审核并同步数量约束，不得自动从修改后的源码重建基线以掩盖缺失。
 
-工作流先执行`python3 scripts/ci/test_verify_oj_reports.py`，再执行`python3 scripts/ci/verify_oj_reports.py smarttt-exam/target/surefire-reports`。13个隔离子场景验证正常39项、重复、failure/error/skipped与汇总矛盾、数量不符、跨文件重复、缺失基线、报告缺失/损坏、零测试，以及新增测试和合法跨文件拆分。异常场景断言子进程退出1，成功场景断言退出0。未更改正式JUnit测试、POM或部署流程；Artifact上传规则及7天保留不变。
+工作流先执行`python3 scripts/ci/test_verify_oj_reports.py`，再执行`python3 scripts/ci/verify_oj_reports.py smarttt-exam/target/surefire-reports`。13个隔离子场景验证正常53项、重复、failure/error/skipped与汇总矛盾、数量不符、跨文件重复、缺失基线、报告缺失/损坏、零测试，以及新增测试和合法跨文件拆分。夹具按真实(classname,name)生成，不再把全部方法归入存储测试类。异常场景断言子进程退出1，成功场景断言退出0。未更改正式JUnit测试、POM或部署流程；Artifact上传规则及7天保留不变。
+
+2026-11-10 HTTP基线扩展：HTTP骨架已作为默认关闭的本地阶段成果提交，生产认证及课堂成员授权未完成，接口不得正式开放。14个名字从实际OjHttpTests.java提取并与真实Surefire XML逐一核对后才加入清单。实际Maven OJ Profile执行53项、0失败/错误/跳过，退出0；正式校验器验证53项完整，退出0；13个夹具子场景全部符合预期，退出0。额外对真实报告副本逐一删除14项HTTP用例中的每一项，并同步修正tests汇总值，全部14次校验退出1且明确指出缺失基线；原XML不变。新增报告用例与合法跨文件拆分仍被接受。证据位于smarttt-exam/target/oj-baseline-53。基线扩展修改尚待独立复审，未提交、未推送，未改HTTP实现或测试逻辑。
 
 exam父POM通过../pom.xml从checkout读取；exam没有依赖其他SmartTT本地模块，也没有systemPath或私有仓库依赖，不需要先install其他模块。当前以-f smarttt-exam/pom.xml直接选择exam，加载父POM但不从根聚合器扫描evaluation等兄弟模块。-f不改变Shell工作目录：后续Python命令仍从仓库根运行，Surefire及上传路径仍为smarttt-exam/target/surefire-reports。
 

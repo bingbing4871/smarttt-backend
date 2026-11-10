@@ -6,11 +6,19 @@ import xml.etree.ElementTree as ET
 CLASS = 'com.example.smartttexam.oj.OjSubmissionTests'
 
 
-def verify(directory):
+def load_baseline():
     names = Path(__file__).with_name('oj-baseline.txt').read_text(encoding='utf-8-sig').splitlines()
-    if len(names) != 39 or len(set(names)) != 39 or not all(names):
+    required = [tuple(name.split('#')) if '#' in name else (CLASS, name) for name in names]
+    if (len(required) != 53 or len(set(required)) != 53
+            or any(len(key) != 2 or not all(key) for key in required)
+            or sum(key[0] == CLASS for key in required) != 39
+            or sum(key[0] == 'com.example.smartttexam.oj.OjHttpTests' for key in required) != 14):
         raise ValueError('Invalid reviewed baseline manifest')
-    required = {(CLASS, name) for name in names}
+    return required
+
+
+def verify(directory):
+    required = set(load_baseline())
     reports = sorted(Path(directory).glob('TEST-*.xml'))
     if not reports:
         raise ValueError('Missing Surefire XML reports')

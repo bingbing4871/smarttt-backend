@@ -5,16 +5,16 @@ import unittest
 from pathlib import Path
 import xml.etree.ElementTree as ET
 sys.dont_write_bytecode = True
-from verify_oj_reports import CLASS
+from verify_oj_reports import CLASS, load_baseline
 
 SCRIPT = Path(__file__).with_name('verify_oj_reports.py')
-NAMES = SCRIPT.with_name('oj-baseline.txt').read_text(encoding='utf-8-sig').splitlines()
+NAMES = load_baseline()
 
 
 def report(names):
     root = ET.Element('testsuite', tests=str(len(names)), failures='0', errors='0', skipped='0')
-    for name in names:
-        ET.SubElement(root, 'testcase', classname=CLASS, name=name)
+    for classname, name in names:
+        ET.SubElement(root, 'testcase', classname=classname, name=name)
     return root
 
 
@@ -25,12 +25,12 @@ class ReportTests(unittest.TestCase):
         for scenario in scenarios:
             with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as directory:
                 root = report(NAMES)
-                if scenario == 'duplicate': root = report([NAMES[0]] * 39)
+                if scenario == 'duplicate': root = report([NAMES[0]] * len(NAMES))
                 if scenario in ('failure', 'error', 'skipped'): ET.SubElement(root[0], scenario)
-                if scenario == 'count': root.set('tests', '40')
-                if scenario == 'missing_baseline': root = report(NAMES[:-1] + ['replacement'])
+                if scenario == 'count': root.set('tests', str(len(NAMES) + 1))
+                if scenario == 'missing_baseline': root = report(NAMES[:-1] + [(CLASS, 'replacement')])
                 if scenario == 'zero': root = report([])
-                if scenario == 'extra': root = report(NAMES + ['new_test'])
+                if scenario == 'extra': root = report(NAMES + [(CLASS, 'new_test')])
                 if scenario == 'split': root = report(NAMES[:20])
                 path = Path(directory) / 'TEST-first.xml'
                 if scenario != 'missing': ET.ElementTree(root).write(path)
