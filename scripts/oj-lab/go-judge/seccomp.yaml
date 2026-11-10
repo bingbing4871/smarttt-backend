@@ -1,0 +1,25 @@
+# Supplementary syscall blocklist, NOT a replacement for VM/namespaces/cgroups.
+# The pinned v1.9.10 source MUST be built with -tags seccomp.
+default_action: allow
+syscalls:
+  - action: kill_process
+    names:
+      - ptrace
+      - mount
+      - umount2
+      - pivot_root
+      - setns
+      - unshare
+      - reboot
+      - kexec_load
+      - init_module
+      - finit_module
+      - delete_module
+      - bpf
+      - perf_event_open
+      - open_by_handle_at
+      - process_vm_readv
+      - process_vm_writev
+      - swapon
+      - swapoff
+      - keyctl

@@ -127,6 +127,37 @@
 
     <profiles>
         <profile>
+            <id>oj-real-e2e</id>
+            <properties>
+                <oj.lab.report-directory>${project.build.directory}/oj-real-e2e-reports</oj.lab.report-directory>
+            </properties>
+            <build><plugins><plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes><include>**/OjRealJudgeTests.java</include></includes>
+                    <reportsDirectory>${oj.lab.report-directory}</reportsDirectory>
+                    <failIfNoTests>true</failIfNoTests>
+                </configuration>
+            </plugin></plugins></build>
+        </profile>
+        <!-- Explicit real-resource opt-in; never selected by the isolated CI profile. -->
+        <profile>
+            <id>oj-real-mysql</id>
+            <properties>
+                <oj.lab.report-directory>${project.build.directory}/oj-real-mysql-reports</oj.lab.report-directory>
+            </properties>
+            <build><plugins><plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes><include>**/OjRealMysqlTests.java</include></includes>
+                    <reportsDirectory>${oj.lab.report-directory}</reportsDirectory>
+                    <failIfNoTests>true</failIfNoTests>
+                </configuration>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
             <id>oj-tests</id>
             <build>
                 <plugins>
