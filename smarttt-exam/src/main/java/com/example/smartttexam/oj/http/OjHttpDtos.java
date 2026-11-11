@@ -2,6 +2,7 @@ package com.example.smartttexam.oj.http;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.example.smartttexam.oj.OjModels.Submission;
+import com.example.smartttexam.oj.OjModels;
 
 public final class OjHttpDtos {
     private OjHttpDtos() { }
@@ -42,5 +43,18 @@ public final class OjHttpDtos {
     public static class Error {
         public final String code;
         public Error(String code) { this.code=code; }
+    }
+    public static class Scope {
+        public final String courseId,classroomId;
+        public Scope(String course,String classroom){ courseId=course; classroomId=classroom; }
+    }
+    public static class Problem {
+        public final String problemId, version, statement, language;
+        public final long cpuTimeLimitMs, wallTimeLimitMs, memoryLimitBytes, outputLimitBytes;
+        public Problem(OjModels.Problem source) {
+            problemId=source.getProblemId(); version=source.getVersion(); statement=source.getStatement(); language=source.getLanguage();
+            cpuTimeLimitMs=source.getCpuTimeLimitMs(); wallTimeLimitMs=source.getWallTimeLimitMs();
+            memoryLimitBytes=source.getMemoryLimitBytes(); outputLimitBytes=source.getOutputLimitBytes();
+        }
     }
 }

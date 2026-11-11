@@ -8,5 +8,8 @@ import javax.servlet.http.HttpServletRequest;
  * Throw 401 for absent/invalid identity, 403 for denied membership, 503 if unavailable.
  */
 public interface OjHttpAccess {
+    default Owner resolveClassroom(HttpServletRequest request,String classroomId) {
+        throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN);
+    }
     Owner authorize(HttpServletRequest request, String courseId, String classroomId);
 }

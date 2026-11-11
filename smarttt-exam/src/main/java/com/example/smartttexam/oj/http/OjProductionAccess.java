@@ -14,6 +14,20 @@ public final class OjProductionAccess implements OjHttpAccess {
     public OjProductionAccess(OjVerifiedIdentity identity,OjAuthorizationData data) {
         this.identity=Objects.requireNonNull(identity); this.data=Objects.requireNonNull(data);
     }
+    @Override public Owner resolveClassroom(HttpServletRequest request,String classroom) {
+        // Authenticate before querying scope; the same complete membership policy is then applied.
+        try {
+            String user=identity.userId(request);
+            if(user==null || user.trim().isEmpty()) throw new ResponseStatusException(UNAUTHORIZED);
+            if(classroom==null || classroom.trim().isEmpty() || classroom.length()>128) throw new ResponseStatusException(FORBIDDEN);
+            List<String> courses=data.courseIdsByClassroom(classroom);
+            if(courses==null || courses.size()!=1 || courses.get(0)==null) throw new ResponseStatusException(FORBIDDEN);
+            return authorize(request,courses.get(0),classroom);
+        } catch(ResponseStatusException error) {
+            throw new ResponseStatusException(error.getStatus()==UNAUTHORIZED ? UNAUTHORIZED :
+                error.getStatus()==FORBIDDEN ? FORBIDDEN : SERVICE_UNAVAILABLE);
+        } catch(RuntimeException error) { throw new ResponseStatusException(SERVICE_UNAVAILABLE); }
+    }
     @Override public Owner authorize(HttpServletRequest request,String course,String classroom) {
         String userId;
         try { userId=identity.userId(request); }

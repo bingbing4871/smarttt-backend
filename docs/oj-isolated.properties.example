@@ -3,6 +3,8 @@ oj.http.enabled=false
 oj.auth.enabled=false
 oj.judge.enabled=false
 oj.http.storage-directory=/isolated/oj/submissions
+# Required when HTTP is explicitly enabled; private catalog, outside static resources.
+oj.http.catalog-file=/isolated/oj/catalog.json
 oj.judge.result-directory=/isolated/oj/results
 oj.judge.endpoint=http://127.0.0.1:5050
 # Compile binary cache budget: 64 KiB..64 MiB; stdout/stderr remain separately bounded.

@@ -17,7 +17,11 @@ public class OjHttpConfiguration {
         if (!path.isAbsolute()) throw new IllegalArgumentException("OJ directory must be absolute");
         return new FileOjSubmissionRepository(path);
     }
-    @Bean public OjSubmissionService ojHttpService(FileOjSubmissionRepository repository) {
-        return new OjSubmissionService(repository,new FixedOjProblemCatalog());
+    @Bean public OjProblemCatalog ojHttpCatalog(@Value("${oj.http.catalog-file:}") String file) throws IOException {
+        // Enabling HTTP requires an explicit private published catalog, never the fixed development fixture.
+        return FileOjProblemCatalog.load(Paths.get(file));
+    }
+    @Bean public OjSubmissionService ojHttpService(FileOjSubmissionRepository repository,OjProblemCatalog catalog) {
+        return new OjSubmissionService(repository,catalog);
     }
 }

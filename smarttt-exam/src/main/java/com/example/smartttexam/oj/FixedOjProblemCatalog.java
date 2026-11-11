@@ -4,7 +4,7 @@ import com.example.smartttexam.oj.OjModels.*;
 import java.util.Arrays;
 
 /** Development fixture only. No connection to the formal question bank. */
-public final class FixedOjProblemCatalog {
+public final class FixedOjProblemCatalog implements OjProblemCatalog {
     public static final String PROBLEM_ID = "oj-fixture-add";
     public Problem get(String problemId) {
         if (!PROBLEM_ID.equals(problemId)) throw new IllegalArgumentException("Unknown fixture problem");
@@ -18,5 +18,9 @@ public final class FixedOjProblemCatalog {
                 new TestCase("negative", "-8 3\n", "-5\n"),
                 new TestCase("boundary", "1000000000 1000000000\n", "2000000000\n")));
         return problem;
+    }
+    @Override public Problem get(Owner owner,String id) { return get(id); }
+    @Override public java.util.List<Problem> list(Owner owner) {
+        return java.util.Collections.singletonList(get(PROBLEM_ID));
     }
 }

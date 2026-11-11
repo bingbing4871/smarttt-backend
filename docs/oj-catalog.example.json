@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "problems": [
+    {
+      "courseId": "lab-course",
+      "classroomId": "lab-class",
+      "published": true,
+      "problem": {
+        "version": "1",
+        "testVersion": "1",
+        "language": "cpp17",
+        "kwaIds": [],
+        "cpuTimeLimitMs": 1000,
+        "wallTimeLimitMs": 3000,
+        "memoryLimitBytes": 134217728,
+        "outputLimitBytes": 65536,
+        "problemId": "sum-two",
+        "statement": "两数之和\n输入两个范围在[-1000000000,1000000000]的整数，输出它们的和。使用标准输入输出。",
+        "testCases": [
+          {
+            "caseId": "positive",
+            "input": "2 3\n",
+            "expectedOutput": "5\n"
+          },
+          {
+            "caseId": "negative",
+            "input": "-8 3\n",
+            "expectedOutput": "-5\n"
+          }
+        ]
+      }
+    },
+    {
+      "courseId": "lab-course",
+      "classroomId": "lab-class",
+      "published": true,
+      "problem": {
+        "version": "1",
+        "testVersion": "1",
+        "language": "cpp17",
+        "kwaIds": [],
+        "cpuTimeLimitMs": 1000,
+        "wallTimeLimitMs": 3000,
+        "memoryLimitBytes": 134217728,
+        "outputLimitBytes": 65536,
+        "problemId": "multiply-two",
+        "statement": "两数之积\n输入两个范围在[-1000000000,1000000000]的整数，输出它们的乘积。使用64位整数及标准输入输出。",
+        "testCases": [
+          {
+            "caseId": "positive",
+            "input": "6 7\n",
+            "expectedOutput": "42\n"
+          },
+          {
+            "caseId": "negative",
+            "input": "-3 8\n",
+            "expectedOutput": "-24\n"
+          }
+        ]
+      }
+    }
+  ]
+}

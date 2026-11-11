@@ -170,6 +170,7 @@
                                 <include>**/OjHttpTests.java</include>
                                 <include>**/OjProductionAccessTests.java</include>
                                 <include>**/OjBackendTests.java</include>
+                                <include>**/OjCatalogTests.java</include>
                             </includes>
                             <failIfNoTests>true</failIfNoTests>
                         </configuration>

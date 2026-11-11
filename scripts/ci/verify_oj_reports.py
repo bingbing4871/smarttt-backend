@@ -9,12 +9,13 @@ CLASS = 'com.example.smartttexam.oj.OjSubmissionTests'
 def load_baseline():
     names = Path(__file__).with_name('oj-baseline.txt').read_text(encoding='utf-8-sig').splitlines()
     required = [tuple(name.split('#')) if '#' in name else (CLASS, name) for name in names]
-    if (len(required) != 108 or len(set(required)) != 108
+    if (len(required) != 122 or len(set(required)) != 122
             or any(len(key) != 2 or not all(key) for key in required)
             or sum(key[0] == CLASS for key in required) != 39
             or sum(key[0] == 'com.example.smartttexam.oj.OjHttpTests' for key in required) != 14
             or sum(key[0] == 'com.example.smartttexam.oj.OjProductionAccessTests' for key in required) != 14
-            or sum(key[0] == 'com.example.smartttexam.oj.OjBackendTests' for key in required) != 41):
+            or sum(key[0] == 'com.example.smartttexam.oj.OjBackendTests' for key in required) != 41
+            or sum(key[0] == 'com.example.smartttexam.oj.OjCatalogTests' for key in required) != 14):
         raise ValueError('Invalid reviewed baseline manifest')
     return required
 

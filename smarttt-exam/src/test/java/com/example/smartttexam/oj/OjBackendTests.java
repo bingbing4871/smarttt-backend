@@ -200,10 +200,12 @@ public class OjBackendTests {
         assertEquals(1,f.adapter(true,true).membershipCount("class","database-user"));org.mockito.Mockito.verify(f.statement).setString(1,"class");org.mockito.Mockito.verify(f.statement).setString(2,"database-user");
     }
     @Test void isolatedEnabledConfigurationWiresAndCloses() throws Exception {
+        Path catalog=root.resolve("catalog.json");
+        Files.write(catalog,"{\"schemaVersion\":1,\"problems\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         Path publicKey=root.resolve("public.pem");Files.write(publicKey,java.util.Base64.getEncoder().encode(keys.getPublic().getEncoded()));
         org.springframework.context.annotation.AnnotationConfigApplicationContext context=new org.springframework.context.annotation.AnnotationConfigApplicationContext();
         Map<String,Object> properties=new HashMap<>();properties.put("oj.http.enabled","true");properties.put("oj.auth.enabled","true");properties.put("oj.judge.enabled","true");
-        properties.put("oj.http.storage-directory",root.resolve("submissions").toString());properties.put("oj.judge.result-directory",root.resolve("results").toString());properties.put("oj.judge.endpoint","http://127.0.0.1:"+server.getAddress().getPort());
+        properties.put("oj.http.catalog-file",catalog.toString());properties.put("oj.http.storage-directory",root.resolve("submissions").toString());properties.put("oj.judge.result-directory",root.resolve("results").toString());properties.put("oj.judge.endpoint","http://127.0.0.1:"+server.getAddress().getPort());
         properties.put("oj.auth.public-key-file",publicKey.toString());properties.put("oj.auth.issuer","isolated-issuer");properties.put("oj.auth.audience","oj");
         context.getEnvironment().getPropertySources().addFirst(new org.springframework.core.env.MapPropertySource("isolated",properties));
         javax.sql.DataSource source=org.mockito.Mockito.mock(javax.sql.DataSource.class);

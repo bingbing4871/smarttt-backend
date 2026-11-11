@@ -120,9 +120,11 @@ public class OjHttpTests {
 
     @Test void configuredRepositoryClosesWithContext() throws Exception {
         Path directory=root.resolve("lifecycle");
+        Path catalog=root.resolve("catalog.json");
+        Files.write(catalog,"{\"schemaVersion\":1,\"problems\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         try(AnnotationConfigApplicationContext context=new AnnotationConfigApplicationContext()) {
             context.setEnvironment(new MockEnvironment().withProperty("oj.http.enabled","true")
-                    .withProperty("oj.http.storage-directory",directory.toString()));
+                    .withProperty("oj.http.storage-directory",directory.toString()).withProperty("oj.http.catalog-file",catalog.toString()));
             context.getBeanFactory().registerSingleton("testOnlyAccess",(OjHttpAccess)(request,course,classroom)->new Owner("alice",course,classroom));
             context.register(OjHttpConfiguration.class); context.refresh();
             assertNotNull(context.getBean(OjSubmissionService.class));

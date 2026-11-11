@@ -32,6 +32,9 @@ public final class OjIsolatedServer implements AutoCloseable {
         this(source,keys,root,judge,16777216);
     }
     public OjIsolatedServer(DataSource source, KeyPair keys, Path root, URI judge,long artifactLimit) throws Exception {
+        this(source,keys,root,judge,artifactLimit,false);
+    }
+    public OjIsolatedServer(DataSource source, KeyPair keys, Path root, URI judge,long artifactLimit,boolean browserLab) throws Exception {
         JdbcTemplate sql=new JdbcTemplate(source);
         if(!Collections.singletonList("SMARTTT_OJ_DISPOSABLE_LAB_V1").equals(
                 sql.queryForList("SELECT marker FROM oj_lab_marker",String.class)))
@@ -40,6 +43,23 @@ public final class OjIsolatedServer implements AutoCloseable {
         Path publicKey=dir.resolve("public.pem");
         Files.write(publicKey,("-----BEGIN PUBLIC KEY-----\n"+Base64.getMimeEncoder().encodeToString(keys.getPublic().getEncoded())
                 +"\n-----END PUBLIC KEY-----\n").getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        // Private scoped catalog for the disposable lab; no production defaults or fixed fallback.
+        Path catalog=dir.resolve("catalog.json");
+        if(!Files.exists(catalog)) {
+            com.example.smartttexam.oj.FileOjProblemCatalog.Document doc=new com.example.smartttexam.oj.FileOjProblemCatalog.Document();
+            doc.schemaVersion=1;doc.problems=new ArrayList<>();
+            for(String id:Arrays.asList("oj-fixture-add","oj-lab-multiply")) {
+                com.example.smartttexam.oj.FileOjProblemCatalog.Entry e=new com.example.smartttexam.oj.FileOjProblemCatalog.Entry();
+                e.courseId="lab-course";e.classroomId="lab-class";e.published=true;
+                e.problem=new com.example.smartttexam.oj.FixedOjProblemCatalog().get(com.example.smartttexam.oj.FixedOjProblemCatalog.PROBLEM_ID);
+                if(id.equals("oj-lab-multiply")) {
+                    e.problem.setProblemId(id);e.problem.setStatement("输入两个整数，输出它们的乘积。使用64位整数。");
+                    e.problem.setTestCases(Arrays.asList(new com.example.smartttexam.oj.OjModels.TestCase("multiply","6 7\n","42\n")));
+                }
+                doc.problems.add(e);
+            }
+            Files.write(catalog,new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsBytes(doc));
+        }
         OjJdbcAuthorizationData.Eligibility policy=new OjJdbcAuthorizationData.Eligibility() {
             public boolean student(String a,String b){return "LAB_ACTIVE".equals(a)&&"LAB_ACTIVE".equals(b);}
             public boolean classroom(String classroom,String term){
@@ -58,6 +78,7 @@ public final class OjIsolatedServer implements AutoCloseable {
         },(RSAPublicKey)keys.getPublic(),(RSAPrivateKey)keys.getPrivate(),ISSUER,AUDIENCE);
         context=new AnnotationConfigServletWebServerApplicationContext();
         Map<String,Object> properties=new HashMap<>();
+        properties.put("oj.http.catalog-file",catalog.toString());
         properties.put("oj.http.enabled","true");properties.put("oj.auth.enabled","true");
         properties.put("oj.judge.enabled",Boolean.toString(judge!=null));
         properties.put("oj.auth.public-key-file",publicKey.toString());properties.put("oj.auth.issuer",ISSUER);
@@ -72,6 +93,7 @@ public final class OjIsolatedServer implements AutoCloseable {
         context.registerBean(OjTokenIssuer.class,()->issuer);
         context.register(Web.class,OjAccessConfiguration.class,OjHttpConfiguration.class,OjHttpController.class,
                 OjJudgeConfiguration.class,Login.class);
+        if(browserLab) context.register(OjBrowserLab.Navigation.class);
         try {context.refresh();port=context.getWebServer().getPort();}
         catch(RuntimeException|Error failure){context.close();throw failure;}
     }

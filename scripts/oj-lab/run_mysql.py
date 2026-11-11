@@ -83,9 +83,12 @@ def main():
     parser.add_argument('--port', type=int, default=33379)
     parser.add_argument('--maven', default=shutil.which('mvn') or shutil.which('mvn.cmd'))
     parser.add_argument('--with-judge', action='store_true', help='Requires operator-confirmed isolated sandbox via loopback/tunnel')
+    parser.add_argument('--browser-classpath', type=Path, help='Test classpath file: real Vue/HTTP lab, no judge; stop with browser/stop file')
     args = parser.parse_args()
     if not 1024 <= args.port <= 65535 or not args.maven:
         raise SystemExit('Valid unprivileged port and installed Maven required')
+    if args.with_judge and args.browser_classpath:
+        raise SystemExit('Browser lab never starts a judge')
     if args.with_judge:
         from urllib.parse import urlsplit
         endpoint = urlsplit(os.environ.get('OJ_LAB_JUDGE_ENDPOINT', ''))
@@ -124,6 +127,9 @@ def main():
     else:
         run.chmod(0o700)
     root_pw, reader_pw, student_pw, other_pw = [secrets.token_hex(24) for _ in range(4)]
+    if args.browser_classpath:
+        # Existing SmartTT login form accepts at most 15 characters. Still random per run.
+        student_pw, other_pw = [secrets.token_hex(7) for _ in range(2)]
     db = 'oj_lab_' + uuid.uuid4().hex[:12]
     env = os.environ.copy()
     env.update(OJ_LAB_CONFIRM='YES_DISPOSABLE_LOCAL_ONLY', OJ_LAB_MYSQL_PORT=str(args.port),
@@ -170,6 +176,53 @@ def main():
         if seed.returncode:
             raise RuntimeError('Fixture schema initialization failed (details withheld to protect credentials)')
         summary['mysql_version'] = subprocess.check_output([str(daemon), '--version'], text=True).strip()
+        if args.browser_classpath:
+            browser = run / 'browser'
+            browser.mkdir()
+            (browser / 'credentials.json').write_text(json.dumps({'login': 'alice', 'password': student_pw,
+                'otherLogin': 'bob', 'otherPassword': other_pw}), encoding='utf-8')
+            cp = args.browser_classpath.resolve().read_text(encoding='utf-8').strip()
+            java = shutil.which('java')
+            if not java or not cp:
+                raise RuntimeError('Existing Java and compiled test classpath required')
+            with (browser / 'java.log').open('wb') as java_log:
+                child = subprocess.Popen([java, '-Xms64m', '-Xmx384m', '-XX:+UseSerialGC', '-cp', cp,
+                    'com.example.smartttexam.oj.integration.OjBrowserLab', str(browser)], cwd=ROOT,
+                    env=env, stdout=java_log, stderr=subprocess.STDOUT)
+                try:
+                    deadline = time.monotonic() + 60
+                    while not (browser / 'ready.json').exists():
+                        if child.poll() is not None or time.monotonic() > deadline:
+                            raise RuntimeError('Browser Java startup failed; see private java.log')
+                        time.sleep(0.2)
+                    pointer = ROOT / 'smarttt-exam/target/oj-unified/active-lab.json'
+                    pointer.parent.mkdir(parents=True, exist_ok=True)
+                    pointer.write_text(json.dumps({'directory': str(browser)}), encoding='utf-8')
+                    print('Real Java/MySQL browser lab ready; location:', browser, flush=True)
+                    deadline = time.monotonic() + 3600
+                    while child.poll() is None and time.monotonic() < deadline:
+                        time.sleep(0.5)
+                    if child.poll() is None:
+                        raise RuntimeError('Browser lab duration exceeded')
+                    summary['browser_exit'] = child.returncode
+                    summary['checks_passed'] = child.returncode == 0
+                    if child.returncode:
+                        raise RuntimeError('Owned browser Java process failed; see private java.log')
+                finally:
+                    try:
+                        (browser / 'stop').touch()
+                        try:
+                            child.wait(timeout=30)
+                        except subprocess.TimeoutExpired:
+                            child.terminate()
+                            try:
+                                child.wait(timeout=10)
+                            except subprocess.TimeoutExpired:
+                                child.kill()
+                                child.wait(timeout=10)
+                    finally:
+                        (browser / 'credentials.json').unlink(missing_ok=True)
+            return
         report_dir = run / 'surefire'
         cmd = [args.maven, '-B', '-ntp', '-f', 'smarttt-exam/pom.xml', '-P' + ('oj-real-e2e' if args.with_judge else 'oj-real-mysql'),
                '-DargLine=-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC',

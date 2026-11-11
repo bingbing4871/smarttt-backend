@@ -74,6 +74,11 @@ public class OjRealMysqlTests {
         assertEquals("RS256",JWT.decode(token).getAlgorithm());assertEquals("student-a",JWT.decode(token).getClaim("id").asString());
         assertEquals(OjIsolatedServer.ISSUER,JWT.decode(token).getIssuer());
         assertEquals(200,call("GET",HISTORY,token,null).code);
+        Reply scope=call("GET","/api/exam/oj/submissions/scope?classroomId=lab-class",token,null);
+        assertEquals(200,scope.code);assertEquals("lab-course",scope.body.path("courseId").asText());
+        Reply catalog=call("GET",HISTORY.replace("submissions?","submissions/problems?"),token,null);
+        assertEquals(200,catalog.code);assertEquals(2,catalog.body.size());
+        assertFalse(catalog.raw.contains("expectedOutput"));assertFalse(catalog.raw.contains("testCases"));
         assertEquals(401,call("POST","/api/exam/oj/login",null,credentials("alice","incorrect")).code);
         assertEquals(401,call("POST","/api/exam/oj/login",null,credentials("ALICE",System.getenv("OJ_LAB_STUDENT_PASSWORD"))).code);
         assertEquals(401,call("POST","/api/exam/oj/login",null,credentials("alice' OR '1'='1","incorrect")).code);
@@ -108,6 +113,8 @@ public class OjRealMysqlTests {
         sql.update("DELETE FROM cm_classroom_student WHERE userId='student-a'");
         assertEquals(403,call("POST","/api/exam/oj/submissions",token,submission("revoked")).code);
         assertEquals(403,call("GET",HISTORY,token,null).code);
+        assertEquals(403,call("GET","/api/exam/oj/submissions/scope?classroomId=lab-class",token,null).code);
+        assertEquals(403,call("GET",HISTORY.replace("submissions?","submissions/problems?"),token,null).code);
         try(java.util.stream.Stream<Path> paths=Files.walk(root.resolve("submissions"))){assertEquals(0,paths.filter(p->p.toString().endsWith(".json")).count());}
     }
     @Test @Order(6) void differentStudentCannotReadAndCrossScopeIsRejected() throws Exception {

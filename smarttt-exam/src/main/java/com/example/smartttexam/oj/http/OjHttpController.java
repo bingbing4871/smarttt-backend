@@ -28,6 +28,23 @@ public class OjHttpController {
     public OjHttpController(OjSubmissionService service, OjHttpAccess access) {
         this.service=Objects.requireNonNull(service); this.access=Objects.requireNonNull(access);
     }
+    @GetMapping("/scope") public OjHttpDtos.Scope scope(@RequestParam("classroomId") String classroom,
+            HttpServletRequest request) {
+        if(classroom==null || classroom.trim().isEmpty() || classroom.length()>128)
+            throw new IllegalArgumentException("Invalid classroom");
+        Owner resolved=access.resolveClassroom(request,classroom);
+        if(resolved==null || !classroom.equals(resolved.getClassroomId())) throw new ResponseStatusException(FORBIDDEN);
+        Owner checked=owner(request,resolved.getCourseId(),classroom);
+        return new OjHttpDtos.Scope(checked.getCourseId(),checked.getClassroomId());
+    }
+    @GetMapping("/problems") public List<OjHttpDtos.Problem> problems(
+            @RequestParam("courseId") String course,@RequestParam("classroomId") String classroom,
+            HttpServletRequest request) {
+        Owner authorized=owner(request,course,classroom);
+        List<OjHttpDtos.Problem> result=new ArrayList<>();
+        for(Problem problem:service.problems(authorized)) result.add(new OjHttpDtos.Problem(problem));
+        return result;
+    }
     private Owner owner(HttpServletRequest request,String course,String classroom) {
         for (String value: new String[]{course,classroom})
             if (value==null || value.trim().isEmpty() || value.length()>128)
